@@ -7,24 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="DTOs\**" />
-    <Compile Remove="Extensions\**" />
-    <Compile Remove="Interfaces\**" />
-    <Compile Remove="Mappings\**" />
-    <Compile Remove="Services\**" />
-    <EmbeddedResource Remove="DTOs\**" />
-    <EmbeddedResource Remove="Extensions\**" />
-    <EmbeddedResource Remove="Interfaces\**" />
-    <EmbeddedResource Remove="Mappings\**" />
-    <EmbeddedResource Remove="Services\**" />
-    <None Remove="DTOs\**" />
-    <None Remove="Extensions\**" />
-    <None Remove="Interfaces\**" />
-    <None Remove="Mappings\**" />
-    <None Remove="Services\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="AutoMapper" Version="15.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.17" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.21" />
@@ -40,6 +22,10 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Features" Version="9.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Application\Application.csproj" />
   </ItemGroup>
 
 </Project>
