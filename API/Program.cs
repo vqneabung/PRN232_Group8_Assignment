@@ -8,6 +8,15 @@ using System;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+//Add Cors for all
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigin", policy =>
+    {
+        policy.AllowAnyHeader()
+        .AllowAnyOrigin().AllowAnyMethod();
+    });
+});
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -33,6 +42,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+app.UseCors("AllowAllOrigin");
 
 app.MapControllers();
 
