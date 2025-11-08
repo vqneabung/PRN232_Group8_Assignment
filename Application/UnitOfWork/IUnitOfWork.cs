@@ -14,6 +14,9 @@ namespace Application.UnitOfWork
         IGenericRepository<Violation> Violations { get; }
 
         IRuleRepository RuleRepository { get; }
+        IStudentRepository StudentRepository { get; }
+        IProjectConventionRepository ProjectConventionRepository { get; }
+        
         Task<int> SaveAsync();
     }
 }
