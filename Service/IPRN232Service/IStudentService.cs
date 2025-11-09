@@ -10,5 +10,6 @@ namespace Service.IPRN232Service
         Task<StudentResponse> CreateStudentAsync(StudentRequest request);
         Task<StudentResponse?> UpdateStudentAsync(int id, StudentRequest request);
         Task<bool> DeleteStudentAsync(int id);
+        Task<int> ImportStudentsFromExcelAsync(ImportStudentsRequest request);
     }
 }

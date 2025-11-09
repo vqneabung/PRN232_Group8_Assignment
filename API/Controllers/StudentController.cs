@@ -1,6 +1,7 @@
 using Application.Enities;
 using Microsoft.AspNetCore.Mvc;
 using Service.IPRN232Service;
+using Service.Helpers;
 
 namespace API.Controllers
 {
@@ -65,6 +66,24 @@ namespace API.Controllers
             }
         }
 
+        //[HttpGet("import/template")]
+        //public IActionResult DownloadImportTemplate()
+        //{
+        //    try
+        //    {
+        //        var templateBytes = ExcelTemplateHelper.GenerateStudentImportTemplate();
+        //        var fileName = $"StudentImportTemplate_{DateTime.Now:yyyyMMdd}.xlsx";
+                
+        //        return File(templateBytes, 
+        //            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+        //            fileName);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new { error = ex.Message });
+        //    }
+        //}
+
         [HttpPost]
         public async Task<IActionResult> CreateStudent([FromBody] StudentRequest request)
         {
@@ -120,6 +139,29 @@ namespace API.Controllers
                 }
 
                 return Ok(new { message = "Student deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("import")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ImportStudents([FromForm] ImportStudentsRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var importedCount = await _studentService.ImportStudentsFromExcelAsync(request);
+                return Ok(new { 
+                    message = $"Successfully imported {importedCount} students.",
+                    importedCount = importedCount
+                });
             }
             catch (Exception ex)
             {
