@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+vectordb_storage/
+*.log
+.env
+.venv
+env/
+ENV/
+*.db
+*.sqlite
+.DS_Store

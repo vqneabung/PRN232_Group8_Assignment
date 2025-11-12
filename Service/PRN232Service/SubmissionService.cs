@@ -123,7 +123,7 @@ namespace Service.PRN232Service
                 {
                     var tempFolder = Path.Combine(Path.GetTempPath(), "ValidationTemp_" + Guid.NewGuid());
                     string zipPath = Path.Combine(tempFolder, request.File.FileName);
-                    
+
                     Directory.CreateDirectory(tempFolder);
                     using (var stream = new FileStream(zipPath, FileMode.Create))
                     {
@@ -141,7 +141,7 @@ namespace Service.PRN232Service
                     // Update submission with validation results
                     var submissions = await _unitOfWork.Submissions.GetAllAsync();
                     var latestSubmission = submissions.OrderByDescending(s => s.UploadedAt).FirstOrDefault();
-                    
+
                     if (latestSubmission != null)
                     {
                         latestSubmission.StudentId = studentId;

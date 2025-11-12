@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  plagiarism-service:
+    build: ./PlagiarismCheckService
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./PlagiarismCheckService/vectordb_storage:/app/vectordb_storage
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

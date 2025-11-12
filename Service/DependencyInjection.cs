@@ -1,4 +1,6 @@
-﻿using Application.UnitOfWork;
+﻿using Application.Helper;
+using Application.UnitOfWork;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Service.IPRN232Service;
 using Service.PRN232Service;
@@ -12,16 +14,18 @@ namespace Service
 {
     public static class DependencyInjection
     {
-        public static IServiceCollection AddDependencyInjection(this IServiceCollection services)
+        public static IServiceCollection AddDependencyInjection(this IServiceCollection services, IConfiguration? configuration = null)
         {
-            // 🧱 Đăng ký Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            // 💼 Đăng ký các Services
+            var plagiarismServiceUrl = configuration?["PlagiarismService:BaseUrl"] ?? "http://localhost:5001";
+            services.AddSingleton(sp => new PlagiarismCheckClient(plagiarismServiceUrl));
+
             services.AddScoped<ISubmissionService, SubmissionService>();
             services.AddScoped<IRuleService, RuleService>();
             services.AddScoped<IProjectConventionService, ProjectConventionService>();
             services.AddScoped<IStudentService, StudentService>();
+            services.AddScoped<IPlagiarismService, PlagiarismService>();
 
             return services;
         }
