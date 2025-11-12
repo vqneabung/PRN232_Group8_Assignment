@@ -35,21 +35,21 @@ namespace API.Controllers
 
         [HttpPost("check")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> CheckPlagiarism([FromForm] IFormFile file, [FromForm] string submissionId, [FromForm] double threshold = 0.85)
+        public async Task<IActionResult> CheckPlagiarism([FromForm] PlagiarismCheckRequest request)
         {
             try
             {
-                if (file == null || file.Length == 0)
+                if (request.File == null || request.File.Length == 0)
                     return BadRequest(new { error = "File không hợp lệ" });
 
                 var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".zip");
-                
+
                 using (var stream = new FileStream(tempPath, FileMode.Create))
                 {
-                    await file.CopyToAsync(stream);
+                    await request.File.CopyToAsync(stream);
                 }
 
-                var result = await _plagiarismService.CheckPlagiarismAsync(tempPath, submissionId, threshold);
+                var result = await _plagiarismService.CheckPlagiarismAsync(tempPath, request.SubmissionId, request.Threshold);
 
                 try { System.IO.File.Delete(tempPath); } catch { }
 
@@ -63,21 +63,21 @@ namespace API.Controllers
 
         [HttpPost("store")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> StoreSubmission([FromForm] IFormFile file, [FromForm] string submissionId)
+        public async Task<IActionResult> StoreSubmission([FromForm] PlagiarismStoreRequest request)
         {
             try
             {
-                if (file == null || file.Length == 0)
+                if (request.File == null || request.File.Length == 0)
                     return BadRequest(new { error = "File không hợp lệ" });
 
                 var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".zip");
-                
+
                 using (var stream = new FileStream(tempPath, FileMode.Create))
                 {
-                    await file.CopyToAsync(stream);
+                    await request.File.CopyToAsync(stream);
                 }
 
-                var result = await _plagiarismService.StoreSubmissionAsync(tempPath, submissionId);
+                var result = await _plagiarismService.StoreSubmissionAsync(tempPath, request.SubmissionId);
 
                 try { System.IO.File.Delete(tempPath); } catch { }
 
