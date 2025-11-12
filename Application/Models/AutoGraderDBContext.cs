@@ -19,6 +19,10 @@ public partial class AutoGraderDBContext : DbContext
 
     public virtual DbSet<Violation> Violations { get; set; }
 
+    public virtual DbSet<Student> Students { get; set; }
+
+    public virtual DbSet<ProjectConvention> ProjectConventions { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Rule>(entity =>
@@ -31,6 +35,24 @@ public partial class AutoGraderDBContext : DbContext
             entity.Property(e => e.Severity).HasMaxLength(50);
         });
 
+        modelBuilder.Entity<Student>(entity =>
+        {
+            entity.HasKey(e => e.StudentId);
+            entity.HasIndex(e => e.StudentCode).IsUnique();
+            entity.Property(e => e.StudentCode).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.FullName).HasMaxLength(255);
+            entity.Property(e => e.Email).HasMaxLength(255);
+        });
+
+        modelBuilder.Entity<ProjectConvention>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ExpectedSolutionPrefix).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.ExpectedSolutionSuffix).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.AdditionalRules).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+        });
+
         modelBuilder.Entity<Submission>(entity =>
         {
             entity.HasKey(e => e.SubmissionId).HasName("PK__Submissi__449EE125B2870CAB");
@@ -40,6 +62,12 @@ public partial class AutoGraderDBContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.ZipFileName).HasMaxLength(255);
+            entity.Property(e => e.SolutionValidationMessage).HasMaxLength(500);
+            entity.Property(e => e.SolutionFilePath).HasMaxLength(500);
+
+            entity.HasOne(d => d.Student).WithMany(p => p.Submissions)
+                .HasForeignKey(d => d.StudentId)
+                .HasConstraintName("FK_Submissions_Students");
         });
 
         modelBuilder.Entity<Violation>(entity =>

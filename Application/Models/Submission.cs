@@ -2,6 +2,7 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Application.Models;
@@ -15,6 +16,20 @@ public partial class Submission
     public DateTime? UploadedAt { get; set; }
 
     public DateTime? CheckedAt { get; set; }
+
+    // Student relationship
+    public int? StudentId { get; set; }
+    public virtual Student? Student { get; set; }
+
+    // Solution naming validation results
+    public bool? IsSolutionNameValid { get; set; }
+
+    [MaxLength(500)]
+    public string? SolutionValidationMessage { get; set; }
+
+    [MaxLength(500)]
+    public string? SolutionFilePath { get; set; }
+
     [JsonIgnore]
     public virtual ICollection<Violation> Violations { get; set; } = new List<Violation>();
 }

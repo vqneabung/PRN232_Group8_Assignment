@@ -20,6 +20,8 @@ namespace Service
             // 💼 Đăng ký các Services
             services.AddScoped<ISubmissionService, SubmissionService>();
             services.AddScoped<IRuleService, RuleService>();
+            services.AddScoped<IProjectConventionService, ProjectConventionService>();
+            services.AddScoped<IStudentService, StudentService>();
 
             return services;
         }

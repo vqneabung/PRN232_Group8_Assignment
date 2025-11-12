@@ -17,7 +17,15 @@ namespace Application.Mapping
             // Mapping cho Rule
             CreateMap<RuleRequest, Rule>();
             CreateMap<Rule, RuleResponse>();
-     
+
+            // Mapping cho ProjectConvention
+            CreateMap<ProjectConventionRequest, ProjectConvention>();
+            CreateMap<ProjectConvention, ProjectConventionResponse>();
+
+            // Mapping cho Student
+            CreateMap<StudentRequest, Student>();
+            CreateMap<Student, StudentResponse>()
+                .ForMember(dest => dest.SubmissionCount, opt => opt.MapFrom(src => src.Submissions.Count));
         }
     }
 }

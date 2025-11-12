@@ -17,6 +17,8 @@ namespace Application.UnitOfWork
         public IRuleRepository RuleRepository { get; }
         public IGenericRepository<Submission> Submissions { get; }
         public IGenericRepository<Violation> Violations { get; }
+        public IStudentRepository StudentRepository { get; }
+        public IProjectConventionRepository ProjectConventionRepository { get; }
 
         public UnitOfWork(AutoGraderDBContext context)
         {
@@ -26,6 +28,8 @@ namespace Application.UnitOfWork
             RuleRepository = new RuleRepository(_context);
             Submissions = new GenericRepository<Submission>(_context);
             Violations = new GenericRepository<Violation>(_context);
+            StudentRepository = new StudentRepository(_context);
+            ProjectConventionRepository = new ProjectConventionRepository(_context);
         }
 
         public async Task<int> SaveAsync() => await _context.SaveChangesAsync();
