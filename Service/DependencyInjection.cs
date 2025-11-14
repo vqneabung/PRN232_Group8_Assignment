@@ -23,9 +23,10 @@ namespace Service
 
             services.AddScoped<ISubmissionService, SubmissionService>();
             services.AddScoped<IRuleService, RuleService>();
-            services.AddScoped<IProjectConventionService, ProjectConventionService>();
             services.AddScoped<IStudentService, StudentService>();
             services.AddScoped<IPlagiarismService, PlagiarismService>();
+            services.AddScoped<IAccountService, AccountService>();
+            services.AddScoped<ITokenService, TokenService>();
 
             return services;
         }

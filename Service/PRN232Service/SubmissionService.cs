@@ -17,12 +17,10 @@ namespace Service.PRN232Service
     public class SubmissionService : ISubmissionService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IProjectConventionService _conventionService;
 
-        public SubmissionService(IUnitOfWork unitOfWork, IProjectConventionService conventionService)
+        public SubmissionService(IUnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
-            _conventionService = conventionService;
         }
 
         public async Task<object> HandleSubmissionAsync(FileUploadRequest request)
@@ -112,70 +110,5 @@ namespace Service.PRN232Service
             };
         }
 
-        public async Task<object> HandleSubmissionWithValidationAsync(FileUploadRequest request, int? studentId = null)
-        {
-            var result = await HandleSubmissionAsync(request);
-
-            // If studentId is provided, also validate solution naming
-            if (studentId.HasValue)
-            {
-                try
-                {
-                    var tempFolder = Path.Combine(Path.GetTempPath(), "ValidationTemp_" + Guid.NewGuid());
-                    string zipPath = Path.Combine(tempFolder, request.File.FileName);
-
-                    Directory.CreateDirectory(tempFolder);
-                    using (var stream = new FileStream(zipPath, FileMode.Create))
-                    {
-                        await request.File.CopyToAsync(stream);
-                    }
-
-                    var validationRequest = new SolutionValidationRequest
-                    {
-                        StudentId = studentId.Value,
-                        SubmissionPath = zipPath
-                    };
-
-                    var validationResult = await _conventionService.ValidateSolutionNamingAsync(validationRequest);
-
-                    // Update submission with validation results
-                    var submissions = await _unitOfWork.Submissions.GetAllAsync();
-                    var latestSubmission = submissions.OrderByDescending(s => s.UploadedAt).FirstOrDefault();
-
-                    if (latestSubmission != null)
-                    {
-                        latestSubmission.StudentId = studentId;
-                        latestSubmission.IsSolutionNameValid = validationResult.IsValid;
-                        latestSubmission.SolutionValidationMessage = validationResult.Message;
-                        latestSubmission.SolutionFilePath = validationResult.FilePath;
-
-                        _unitOfWork.Submissions.Update(latestSubmission);
-                        await _unitOfWork.SaveAsync();
-                    }
-
-                    try { Directory.Delete(tempFolder, true); } catch { }
-
-                    return new
-                    {
-                        SubmissionResult = result,
-                        SolutionValidation = validationResult
-                    };
-                }
-                catch (Exception ex)
-                {
-                    return new
-                    {
-                        SubmissionResult = result,
-                        SolutionValidation = new
-                        {
-                            IsValid = false,
-                            Message = $"Solution validation failed: {ex.Message}"
-                        }
-                    };
-                }
-            }
-
-            return result;
-        }
     }
 }

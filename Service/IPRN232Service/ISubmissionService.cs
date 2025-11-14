@@ -12,6 +12,5 @@ namespace Service.IPRN232Service
     public interface ISubmissionService
     {
         Task<object> HandleSubmissionAsync(FileUploadRequest request);
-        Task<object> HandleSubmissionWithValidationAsync(FileUploadRequest request, int? studentId = null);
     }
 }
