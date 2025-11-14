@@ -17,6 +17,7 @@ namespace Application.UnitOfWork
         IStudentRepository StudentRepository { get; }
 
         IAccountRepository AccountRepository { get; }
+        IClassRepository ClassRepository { get; }
 
         Task<int> SaveAsync();
     }

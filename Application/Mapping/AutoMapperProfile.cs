@@ -22,6 +22,14 @@ namespace Application.Mapping
             CreateMap<StudentRequest, Student>();
             CreateMap<Student, StudentResponse>()
                 .ForMember(dest => dest.SubmissionCount, opt => opt.MapFrom(src => src.Submissions.Count));
+
+            // Mapping cho Class
+            CreateMap<ClassRequest, Class>();
+            CreateMap<Class, ClassResponse>()
+                .ForMember(dest => dest.LecturerName, opt => opt.MapFrom(src => src.LecturerNavigation != null ? src.LecturerNavigation.UserName : null))
+                .ForMember(dest => dest.ExaminerName, opt => opt.MapFrom(src => src.ExaminerNavigation != null ? src.ExaminerNavigation.UserName : null))
+                .ForMember(dest => dest.StudentCount, opt => opt.MapFrom(src => src.Students.Count))
+                .ForMember(dest => dest.Students, opt => opt.MapFrom(src => src.Students));
         }
     }
 }

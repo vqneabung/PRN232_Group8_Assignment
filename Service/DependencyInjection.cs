@@ -27,6 +27,7 @@ namespace Service
             services.AddScoped<IPlagiarismService, PlagiarismService>();
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<ITokenService, TokenService>();
+            services.AddScoped<IClassService, ClassService>();
 
             return services;
         }
