@@ -15,8 +15,10 @@ namespace Application.UnitOfWork
 
         IRuleRepository RuleRepository { get; }
         IStudentRepository StudentRepository { get; }
-        IProjectConventionRepository ProjectConventionRepository { get; }
-        
+
+        IAccountRepository AccountRepository { get; }
+        IClassRepository ClassRepository { get; }
+
         Task<int> SaveAsync();
     }
 }

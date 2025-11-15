@@ -1,5 +1,0 @@
-{
-  "ExpectedSolutionPrefix": "PRN232_SU25_",
-  "ExpectedSolutionSuffix": ".api.sln",
-  "AdditionalRules": "Solution name must contain student code from database"
-}

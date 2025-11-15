@@ -4,13 +4,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
 
 namespace Application.Enities
 {
     public class FileUploadRequest
     {
-        public IFormFile File { get; set; }
-        public string RuleIds { get; set; }
+        [Required(ErrorMessage = "File is required")]
+        public IFormFile File { get; set; } = null!;
+        
+        public string? RuleIds { get; set; }
+        
+        [Required(ErrorMessage = "StudentId is required")]
+        public int StudentId { get; set; }
     }
 
 }
