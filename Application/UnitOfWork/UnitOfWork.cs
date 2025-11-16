@@ -21,6 +21,8 @@ namespace Application.UnitOfWork
         public IAccountRepository AccountRepository { get; }
         public IClassRepository ClassRepository { get; }
 
+        public IUserRepository UserRepository { get; }
+
         public UnitOfWork(AutoGraderDBContext context)
         {
             _context = context;
@@ -32,6 +34,7 @@ namespace Application.UnitOfWork
             StudentRepository = new StudentRepository(_context);
             AccountRepository = new AccountRepository(_context);
             ClassRepository = new ClassRepository(_context);
+            UserRepository = new UserRepository(_context);
         }
 
         public async Task<int> SaveAsync() => await _context.SaveChangesAsync();

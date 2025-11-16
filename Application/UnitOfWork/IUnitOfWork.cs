@@ -19,6 +19,8 @@ namespace Application.UnitOfWork
         IAccountRepository AccountRepository { get; }
         IClassRepository ClassRepository { get; }
 
+        IUserRepository UserRepository { get; }
+
         Task<int> SaveAsync();
     }
 }

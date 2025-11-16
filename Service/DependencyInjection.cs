@@ -28,6 +28,7 @@ namespace Service
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IClassService, ClassService>();
+            services.AddScoped<IUserService, UserService>();
 
             return services;
         }

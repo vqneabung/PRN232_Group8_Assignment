@@ -23,6 +23,9 @@ namespace Application.Mapping
             CreateMap<Student, StudentResponse>()
                 .ForMember(dest => dest.SubmissionCount, opt => opt.MapFrom(src => src.Submissions.Count));
 
+            CreateMap<User, UserResponse>()
+                .ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.Role != null ? src.Role.RoleName : null));
+
             // Mapping cho Class
             CreateMap<ClassRequest, Class>();
             CreateMap<Class, ClassResponse>()
