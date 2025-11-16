@@ -34,11 +34,15 @@ storage = load_storage()
 print(f"[STARTUP] Loaded {len(storage)} submissions from storage")
 
 class PlagiarismResult(BaseModel):
-    is_plagiarized: bool
-    similarity_score: float
-    matched_submission_id: Optional[str]
-    matched_files: List[dict]
-    total_files_checked: int
+    isPlagiarized: bool
+    similarityScore: float
+    matchedSubmissionId: Optional[str]
+    matchedFiles: List[dict]
+    totalFilesChecked: int
+    
+    class Config:
+        populate_by_name = True
+        alias_generator = None
 
 class StoreRequest(BaseModel):
     submission_id: str
@@ -64,41 +68,61 @@ async def check_plagiarism(
     submission_id: str = Form(...),
     threshold: float = Form(0.85)
 ):
-    storage = load_storage()
+    global storage
+    current_storage = load_storage()
     
-    temp_dir = tempfile.mkdtemp()
+    temp_folder = os.path.join(tempfile.gettempdir(), f"Submission_{submission_id}_{os.urandom(4).hex()}")
+    os.makedirs(temp_folder, exist_ok=True)
     
     try:
-        zip_path = os.path.join(temp_dir, file.filename)
+        zip_path = os.path.join(temp_folder, file.filename or "submission.zip")
         with open(zip_path, 'wb') as buffer:
             shutil.copyfileobj(file.file, buffer)
         
-        extract_dir = os.path.join(temp_dir, "extracted")
-        os.makedirs(extract_dir, exist_ok=True)
+        print(f"[DEBUG] Uploaded file size: {os.path.getsize(zip_path)} bytes")
+        
+        extract_path = os.path.join(temp_folder, "Extracted")
+        os.makedirs(extract_path, exist_ok=True)
         
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_dir)
+            zip_ref.extractall(extract_path)
+        
+        all_files = []
+        for root, dirs, files in os.walk(extract_path):
+            for f in files:
+                all_files.append(os.path.join(root, f))
+        
+        print(f"[DEBUG] Total files extracted: {len(all_files)}")
         
         code_files = []
-        for root, dirs, files in os.walk(extract_dir):
-            for filename in files:
-                if filename.endswith(('.cs', '.py', '.java', '.cpp', '.c', '.js', '.ts', '.txt')):
-                    file_path = os.path.join(root, filename)
-                    content = extract_code_content(file_path)
-                    if content and len(content.strip()) > 50:
-                        code_files.append({
-                            'filename': filename,
-                            'content': content,
-                            'path': os.path.relpath(file_path, extract_dir)
-                        })
+        for file_path in all_files:
+            filename = os.path.basename(file_path)
+            
+            if 'postman' in filename.lower() or 'postman' in file_path.lower():
+                continue
+            
+            if filename.endswith(('.cs', '.py', '.java', '.cpp', '.c', '.js', '.ts', '.txt', '.csproj', '.sln', '.json')):
+                if filename.endswith(('.json')) and ('nuget' in filename.lower() or 'project.assets' in filename.lower() or 'dgspec' in filename.lower()):
+                    continue
+                    
+                content = extract_code_content(file_path)
+                if content and len(content.strip()) > 50:
+                    relative_path = file_path.replace(extract_path, "").lstrip(os.sep).lstrip('/')
+                    code_files.append({
+                        'filename': filename,
+                        'content': content,
+                        'path': relative_path
+                    })
+        
+        print(f"[DEBUG] Code files found: {len(code_files)}")
         
         if not code_files:
             return JSONResponse({
-                "is_plagiarized": False,
-                "similarity_score": 0.0,
-                "matched_submission_id": None,
-                "matched_files": [],
-                "total_files_checked": 0,
+                "isPlagiarized": False,
+                "similarityScore": 0.0,
+                "matchedSubmissionId": None,
+                "matchedFiles": [],
+                "totalFilesChecked": 0,
                 "message": "No valid code files found"
             })
         
@@ -129,23 +153,44 @@ async def check_plagiarism(
                         matched_submission = stored_item['submission_id']
                     
                     matched_details.append({
-                        'current_file': code_file['filename'],
-                        'matched_file': stored_item.get('filename', 'unknown'),
+                        'currentFile': code_file['filename'],
+                        'matchedFile': stored_item.get('filename', 'unknown'),
                         'similarity': round(float(similarity), 4),
-                        'matched_submission_id': stored_item['submission_id']
+                        'matchedSubmissionId': stored_item['submission_id']
                     })
         
+        if max_similarity < threshold:
+            storage = load_storage()
+            stored_count = 0
+            
+            for code_file in code_files:
+                content = code_file['content']
+                file_hash = calculate_file_hash(content)
+                embedding = model.encode(content).tolist()
+                
+                storage.append({
+                    'submission_id': submission_id,
+                    'filename': code_file['filename'],
+                    'file_hash': file_hash,
+                    'path': code_file['path'],
+                    'embedding': embedding
+                })
+                stored_count += 1
+            
+            save_storage(storage)
+            print(f"[AUTO-STORE] Stored {stored_count} files for submission {submission_id}")
+        
         return JSONResponse({
-            "is_plagiarized": plagiarism_detected,
-            "similarity_score": round(float(max_similarity), 4),
-            "matched_submission_id": matched_submission,
-            "matched_files": matched_details,
-            "total_files_checked": len(code_files)
+            "isPlagiarized": plagiarism_detected,
+            "similarityScore": round(float(max_similarity), 4),
+            "matchedSubmissionId": matched_submission,
+            "matchedFiles": matched_details,
+            "totalFilesChecked": len(code_files)
         })
     
     finally:
         try:
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(temp_folder)
         except:
             pass
 
@@ -155,39 +200,45 @@ async def store_submission(
     submission_id: str = Form(...)
 ):
     global storage
-    temp_dir = tempfile.mkdtemp()
+    temp_folder = os.path.join(tempfile.gettempdir(), f"Store_{submission_id}")
+    os.makedirs(temp_folder, exist_ok=True)
     
     try:
-        zip_path = os.path.join(temp_dir, file.filename)
+        zip_path = os.path.join(temp_folder, file.filename or "submission.zip")
         with open(zip_path, 'wb') as buffer:
             shutil.copyfileobj(file.file, buffer)
         
-        extract_dir = os.path.join(temp_dir, "extracted")
-        os.makedirs(extract_dir, exist_ok=True)
+        extract_path = os.path.join(temp_folder, "Extracted")
+        os.makedirs(extract_path, exist_ok=True)
         
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_dir)
+            zip_ref.extractall(extract_path)
+        
+        all_files = []
+        for root, dirs, files in os.walk(extract_path):
+            for f in files:
+                all_files.append(os.path.join(root, f))
         
         stored_count = 0
         
-        for root, dirs, files in os.walk(extract_dir):
-            for filename in files:
-                if filename.endswith(('.cs', '.py', '.java', '.cpp', '.c', '.js', '.ts', '.txt')):
-                    file_path = os.path.join(root, filename)
-                    content = extract_code_content(file_path)
+        for file_path in all_files:
+            filename = os.path.basename(file_path)
+            if filename.endswith(('.cs', '.py', '.java', '.cpp', '.c', '.js', '.ts', '.txt')):
+                content = extract_code_content(file_path)
+                
+                if content and len(content.strip()) > 50:
+                    file_hash = calculate_file_hash(content)
+                    embedding = model.encode(content).tolist()
+                    relative_path = file_path.replace(extract_path, "").lstrip(os.sep).lstrip('/')
                     
-                    if content and len(content.strip()) > 50:
-                        file_hash = calculate_file_hash(content)
-                        embedding = model.encode(content).tolist()
-                        
-                        storage.append({
-                            'submission_id': submission_id,
-                            'filename': filename,
-                            'file_hash': file_hash,
-                            'path': os.path.relpath(file_path, extract_dir),
-                            'embedding': embedding
-                        })
-                        stored_count += 1
+                    storage.append({
+                        'submission_id': submission_id,
+                        'filename': filename,
+                        'file_hash': file_hash,
+                        'path': relative_path,
+                        'embedding': embedding
+                    })
+                    stored_count += 1
         
         save_storage(storage)
         
@@ -199,7 +250,7 @@ async def store_submission(
     
     finally:
         try:
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(temp_folder)
         except:
             pass
 
