@@ -200,6 +200,66 @@ namespace Service.PRN232Service
             }).Cast<object>().ToList();
         }
 
+        /// <summary>
+        /// Get all submissions from students in a class
+        /// </summary>
+        /// <param name="classId">Class ID</param>
+        /// <returns>List of submissions from all students in the class</returns>
+        public async Task<List<object>> GetSubmissionsByClassIdAsync(int classId)
+        {
+            // Get all students in the class
+            var classEntity = await _unitOfWork.ClassRepository.GetClassWithDetailsAsync(classId);
+            if (classEntity == null)
+                return new List<object>();
+
+            var studentIds = classEntity.Students.Select(s => s.StudentId).ToList();
+
+            if (!studentIds.Any())
+                return new List<object>();
+
+            // Get all submissions
+            var submissions = await _unitOfWork.Submissions.GetAllAsync();
+            var classSubmissions = submissions.Cast<Submission>()
+                .Where(s => s.StudentId.HasValue && studentIds.Contains(s.StudentId.Value))
+                .OrderByDescending(s => s.UploadedAt)
+                .ToList();
+
+            var allViolations = await _unitOfWork.Violations.GetAllAsync();
+
+            var result = new List<object>();
+
+            foreach (var submission in classSubmissions)
+            {
+                var student = submission.StudentId.HasValue
+                    ? await _unitOfWork.StudentRepository.GetByIdAsync(submission.StudentId.Value)
+                    : null;
+
+                var violations = allViolations.Cast<Violation>()
+                    .Where(v => v.SubmissionId == submission.SubmissionId)
+                    .ToList();
+
+                result.Add(new
+                {
+                    submission.SubmissionId,
+                    submission.ZipFileName,
+                    submission.UploadedAt,
+                    submission.CheckedAt,
+                    StudentId = submission.StudentId,
+                    StudentInfo = student != null ? new
+                    {
+                        student.StudentId,
+                        student.StudentCode,
+                        student.FullName,
+                        student.Email
+                    } : null,
+                    ViolationCount = violations.Count,
+                    HasViolations = violations.Any()
+                });
+            }
+
+            return result;
+        }
+
         public async Task<List<object>> GetAllSubmissionsAsync()
         {
             var submissions = await _unitOfWork.Submissions.GetAllAsync();

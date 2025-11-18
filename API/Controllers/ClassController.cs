@@ -11,10 +11,12 @@ namespace API.Controllers
     public class ClassController : ControllerBase
     {
         private readonly IClassService _classService;
+        private readonly ISubmissionService _submissionService;
 
-        public ClassController(IClassService classService)
+        public ClassController(IClassService classService, ISubmissionService submissionService)
         {
             _classService = classService;
+            _submissionService = submissionService;
         }
 
         /// <summary>

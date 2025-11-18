@@ -14,6 +14,7 @@ namespace Service.IPRN232Service
         Task<object> HandleSubmissionAsync(FileUploadRequest request);
         Task<object?> GetSubmissionByIdAsync(int submissionId);
         Task<List<object>> GetSubmissionsByStudentIdAsync(int studentId);
+        Task<List<object>> GetSubmissionsByClassIdAsync(int classId);
         Task<List<object>> GetAllSubmissionsAsync();
         Task<bool> DeleteSubmissionAsync(int submissionId);
     }

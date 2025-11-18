@@ -137,5 +137,24 @@ namespace API.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Get all submissions from students in a class
+        /// </summary>
+        /// <param name="classId">Class ID</param>
+        /// <returns>List of submissions from all students in the class</returns>
+        [HttpGet("by-class/{classId}")]
+        public async Task<IActionResult> GetSubmissionsByClass(int classId)
+        {
+            try
+            {
+                var submissions = await _service.GetSubmissionsByClassIdAsync(classId);
+                return Ok(submissions);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
     }
 }
