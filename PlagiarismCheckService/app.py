@@ -80,6 +80,7 @@ async def check_plagiarism(
             shutil.copyfileobj(file.file, buffer)
         
         print(f"[DEBUG] Uploaded file size: {os.path.getsize(zip_path)} bytes")
+        print(f"[DEBUG] Submission ID: '{submission_id}'")
         
         extract_path = os.path.join(temp_folder, "Extracted")
         os.makedirs(extract_path, exist_ok=True)
@@ -99,6 +100,32 @@ async def check_plagiarism(
             filename = os.path.basename(file_path)
             
             if 'postman' in filename.lower() or 'postman' in file_path.lower():
+                continue
+            
+            auto_generated_patterns = [
+                'AssemblyAttributes.cs',
+                'GlobalUsings.g.cs',
+                '.AssemblyInfo.cs',
+                'TemporaryGeneratedFile_',
+                '.Designer.cs',
+                '.designer.cs',
+                'Reference.cs',
+                'migrations',
+                'MvcApplicationPartsAssemblyInfo.cs',
+                'GeneratedMSBuildEditorConfig.editorconfig',
+                'AssemblyInfoInputs.cache',
+                '.sourcelink.json',
+                'ApiEndpoints.json',
+                '.cache',
+                '.Up2Date',
+                'staticwebassets'
+            ]
+            
+            if any(pattern.lower() in filename.lower() for pattern in auto_generated_patterns):
+                continue
+            
+            folder_exclude_patterns = ['\\obj\\', '/obj/', '\\bin\\', '/bin/', '\\ref\\', '/ref/', '\\refint\\', '/refint/', '\\staticwebassets\\', '/staticwebassets/']
+            if any(pattern.lower() in file_path.lower() for pattern in folder_exclude_patterns):
                 continue
             
             if filename.endswith(('.cs', '.py', '.java', '.cpp', '.c', '.js', '.ts', '.txt', '.csproj', '.sln', '.json')):
@@ -129,10 +156,29 @@ async def check_plagiarism(
         current_storage = load_storage()
         print(f"[CHECK] Loaded {len(current_storage)} submissions from storage")
         
+        unique_submission_ids = set([item['submission_id'] for item in current_storage]) if current_storage else set()
+        print(f"[CHECK] Unique submission IDs in storage: {unique_submission_ids}")
+        
         plagiarism_detected = False
         max_similarity = 0.0
         matched_submission = None
         matched_details = []
+        is_same_project = False
+        
+        existing_hashes = set()
+        for stored_item in current_storage:
+            if stored_item['submission_id'] == submission_id:
+                existing_hashes.add(stored_item.get('file_hash', ''))
+        
+        current_hashes = set()
+        for code_file in code_files:
+            content = code_file['content']
+            file_hash = calculate_file_hash(content)
+            current_hashes.add(file_hash)
+        
+        if existing_hashes and current_hashes.issubset(existing_hashes):
+            is_same_project = True
+            print(f"[CHECK] Same project detected for submission {submission_id}")
         
         for code_file in code_files:
             content = code_file['content']
@@ -140,9 +186,6 @@ async def check_plagiarism(
             embedding = model.encode(content).reshape(1, -1)
             
             for stored_item in current_storage:
-                if stored_item['submission_id'] == submission_id:
-                    continue
-                
                 stored_embedding = np.array(stored_item['embedding']).reshape(1, -1)
                 similarity = cosine_similarity(embedding, stored_embedding)[0][0]
                 
@@ -160,25 +203,30 @@ async def check_plagiarism(
                     })
         
         if max_similarity < threshold:
-            storage = load_storage()
-            stored_count = 0
-            
-            for code_file in code_files:
-                content = code_file['content']
-                file_hash = calculate_file_hash(content)
-                embedding = model.encode(content).tolist()
+            if is_same_project:
+                print(f"[AUTO-STORE] Same project for submission {submission_id}, skipping auto-store")
+            else:
+                storage = load_storage()
                 
-                storage.append({
-                    'submission_id': submission_id,
-                    'filename': code_file['filename'],
-                    'file_hash': file_hash,
-                    'path': code_file['path'],
-                    'embedding': embedding
-                })
-                stored_count += 1
-            
-            save_storage(storage)
-            print(f"[AUTO-STORE] Stored {stored_count} files for submission {submission_id}")
+                storage = [item for item in storage if item['submission_id'] != submission_id]
+                
+                stored_count = 0
+                for code_file in code_files:
+                    content = code_file['content']
+                    file_hash = calculate_file_hash(content)
+                    embedding = model.encode(content).tolist()
+                    
+                    storage.append({
+                        'submission_id': submission_id,
+                        'filename': code_file['filename'],
+                        'file_hash': file_hash,
+                        'path': code_file['path'],
+                        'embedding': embedding
+                    })
+                    stored_count += 1
+                
+                save_storage(storage)
+                print(f"[AUTO-STORE] Stored {stored_count} files for submission {submission_id} (replaced old data)")
         
         return JSONResponse({
             "isPlagiarized": plagiarism_detected,
@@ -260,12 +308,35 @@ async def health_check():
 
 @app.delete("/delete-submission/{submission_id}")
 async def delete_submission(submission_id: str):
-    global storage
+    storage = load_storage()
     original_count = len(storage)
     storage = [item for item in storage if item['submission_id'] != submission_id]
     deleted_count = original_count - len(storage)
     save_storage(storage)
-    return {"message": f"Deleted {deleted_count} files from submission {submission_id}"}
+    print(f"[DELETE] Deleted {deleted_count} files from submission {submission_id}")
+    return {
+        "message": f"Deleted {deleted_count} files from submission {submission_id}",
+        "deletedCount": deleted_count
+    }
+
+@app.delete("/clear-storage")
+async def clear_storage():
+    save_storage([])
+    print(f"[DELETE] Cleared all data from storage")
+    return {
+        "message": "Storage cleared successfully",
+        "deletedCount": "all"
+    }
+
+@app.get("/storage-info")
+async def storage_info():
+    storage = load_storage()
+    submission_ids = list(set([item['submission_id'] for item in storage]))
+    return {
+        "totalFiles": len(storage),
+        "submissions": submission_ids,
+        "submissionCount": len(submission_ids)
+    }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5001)
