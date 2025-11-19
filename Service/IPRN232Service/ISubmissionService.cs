@@ -17,5 +17,6 @@ namespace Service.IPRN232Service
         Task<List<object>> GetSubmissionsByClassIdAsync(int classId);
         Task<List<object>> GetAllSubmissionsAsync();
         Task<bool> DeleteSubmissionAsync(int submissionId);
+        Task<BatchGradingResult> ProcessBatchGradingAsync(BatchGradingRequest request);
     }
 }
