@@ -216,28 +216,30 @@ async def check_plagiarism(
                         'matchedSubmissionId': stored_item['submission_id']
                     })
         
-        if max_similarity < threshold:
-            storage = load_storage()
+        storage = load_storage()
+        storage = [item for item in storage if item['submission_id'] != submission_id]
+        
+        stored_count = 0
+        for code_file in code_files:
+            content = code_file['content']
+            file_hash = calculate_file_hash(content)
+            embedding = model.encode(content).tolist()
             
-            storage = [item for item in storage if item['submission_id'] != submission_id]
-            
-            stored_count = 0
-            for code_file in code_files:
-                content = code_file['content']
-                file_hash = calculate_file_hash(content)
-                embedding = model.encode(content).tolist()
-                
-                storage.append({
-                    'submission_id': submission_id,
-                    'filename': code_file['filename'],
-                    'file_hash': file_hash,
-                    'path': code_file['path'],
-                    'embedding': embedding
-                })
-                stored_count += 1
-            
-            save_storage(storage)
-            print(f"[AUTO-STORE] Stored {stored_count} files for submission {submission_id} (replaced old data)")
+            storage.append({
+                'submission_id': submission_id,
+                'filename': code_file['filename'],
+                'file_hash': file_hash,
+                'path': code_file['path'],
+                'embedding': embedding
+            })
+            stored_count += 1
+        
+        save_storage(storage)
+        
+        if plagiarism_detected:
+            print(f"[STORE] Stored {stored_count} files for submission {submission_id} (plagiarism detected but still saved)")
+        else:
+            print(f"[STORE] Stored {stored_count} files for submission {submission_id} (no plagiarism)")
         
         return JSONResponse({
             "isPlagiarized": plagiarism_detected,
