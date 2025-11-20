@@ -176,9 +176,20 @@ async def check_plagiarism(
             file_hash = calculate_file_hash(content)
             current_hashes.add(file_hash)
         
-        if existing_hashes and current_hashes.issubset(existing_hashes):
+        if existing_hashes and current_hashes == existing_hashes and len(current_hashes) == len(existing_hashes):
             is_same_project = True
-            print(f"[CHECK] Same project detected for submission {submission_id}")
+            print(f"[CHECK] Same project detected for submission {submission_id}, skipping all checks")
+            
+            return JSONResponse({
+                "isPlagiarized": False,
+                "similarityScore": 0.0,
+                "matchedSubmissionId": None,
+                "matchedFiles": [],
+                "totalFilesChecked": len(code_files),
+                "message": "Same project as previous submission, no changes detected"
+            })
+        
+        print(f"[CHECK] New or modified project for submission {submission_id}, checking plagiarism")
         
         for code_file in code_files:
             content = code_file['content']
@@ -186,6 +197,9 @@ async def check_plagiarism(
             embedding = model.encode(content).reshape(1, -1)
             
             for stored_item in current_storage:
+                if stored_item['submission_id'] == submission_id:
+                    continue
+                
                 stored_embedding = np.array(stored_item['embedding']).reshape(1, -1)
                 similarity = cosine_similarity(embedding, stored_embedding)[0][0]
                 
@@ -203,30 +217,27 @@ async def check_plagiarism(
                     })
         
         if max_similarity < threshold:
-            if is_same_project:
-                print(f"[AUTO-STORE] Same project for submission {submission_id}, skipping auto-store")
-            else:
-                storage = load_storage()
+            storage = load_storage()
+            
+            storage = [item for item in storage if item['submission_id'] != submission_id]
+            
+            stored_count = 0
+            for code_file in code_files:
+                content = code_file['content']
+                file_hash = calculate_file_hash(content)
+                embedding = model.encode(content).tolist()
                 
-                storage = [item for item in storage if item['submission_id'] != submission_id]
-                
-                stored_count = 0
-                for code_file in code_files:
-                    content = code_file['content']
-                    file_hash = calculate_file_hash(content)
-                    embedding = model.encode(content).tolist()
-                    
-                    storage.append({
-                        'submission_id': submission_id,
-                        'filename': code_file['filename'],
-                        'file_hash': file_hash,
-                        'path': code_file['path'],
-                        'embedding': embedding
-                    })
-                    stored_count += 1
-                
-                save_storage(storage)
-                print(f"[AUTO-STORE] Stored {stored_count} files for submission {submission_id} (replaced old data)")
+                storage.append({
+                    'submission_id': submission_id,
+                    'filename': code_file['filename'],
+                    'file_hash': file_hash,
+                    'path': code_file['path'],
+                    'embedding': embedding
+                })
+                stored_count += 1
+            
+            save_storage(storage)
+            print(f"[AUTO-STORE] Stored {stored_count} files for submission {submission_id} (replaced old data)")
         
         return JSONResponse({
             "isPlagiarized": plagiarism_detected,
